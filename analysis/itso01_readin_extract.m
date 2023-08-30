@@ -32,8 +32,11 @@ s_names = {'ret1' 'ret2'}; % name of 2 sessions in data structure
 
 %% predefine matrix for assoc model
 sub_id = []; 
+cond_ = [];
 ses_id = [];
 trl_no = []; %trial number
+
+isub_count = 1;
 
 X1 = [];
 X2 = [];
@@ -48,6 +51,8 @@ Y4 = [];
 %%
 
 for isub = 1:numel(nsub)
+    
+    assoc_tmp = [];
     
     for ises = 1:numel(s_folder)
         
@@ -195,59 +200,65 @@ for isub = 1:numel(nsub)
         dat_out.(s_names{ises}).assoc.ncorr(isub) = ...
             sum(class_label - class_predict == 0);
         
-        % put predicted classes in X1, X2, X3, X4 format
-        X1_ = class_predict == 1;
-        X2_ = class_predict == 2;
-        X3_ = class_predict == 3;
-        X4_ = class_predict == 4; % not needed for model (derived from X1 to X3)
+        % item memory correct but association incorrect
+        dat_out.(s_names{ises}).assoc.incorr(isub) = ...
+            sum(class_label - class_predict ~= 0);
         
-        Y_ = class_label;
-        Y1_ = class_label == 1;
-        Y2_ = class_label == 2;
-        Y3_ = class_label == 3;
-        Y4_ = class_label == 4;
         
-        %% save in a separate matrix
-        % {'ballroom', 'sauna','lighthouse', 'wheat_field'} = 1,2,3,4
-        X1 = [X1; X1_];
-        X2 = [X2; X2_];
-        X3 = [X3; X3_];
-        X4 = [X4; X4_];
+        %% just save these data if associative performance threshold is reached
+        assoc_tmp(ises) = sum(class_label - class_predict == 0)*(100/(n.hits - 0.5));
         
-        Y = [Y; Y_];
-        Y1 = [Y1; Y1_];
-        Y2 = [Y2; Y2_];
-        Y3 = [Y3; Y3_];
-        Y4 = [Y4; Y4_];
+        if assoc_tmp(1) > 25 
         
-        %% add subject ID and trl no
-        sub_id_ = repmat(isub,[numel(X1_),1]);
-        sub_id = [sub_id; sub_id_];
+            % put actual class in X1, X2, X3, X4 format
+            X1_ = class_label == 1;
+            X2_ = class_label == 2;
+            X3_ = class_label == 3;
+            X4_ = class_label == 4; % not needed for model (derived from X1 to X3)
+
+            % which class was choosen
+            Y_ = class_predict;
+            Y1_ = class_predict == 1;
+            Y2_ = class_predict == 2;
+            Y3_ = class_predict == 3;
+            Y4_ = class_predict == 4;
+
+            %% save in a separate matrix
+            % {'ballroom', 'sauna','lighthouse', 'wheat_field'} = 1,2,3,4
+            X1 = [X1; X1_];
+            X2 = [X2; X2_];
+            X3 = [X3; X3_];
+            X4 = [X4; X4_];
+
+            Y = [Y; Y_];
+            Y1 = [Y1; Y1_];
+            Y2 = [Y2; Y2_];
+            Y3 = [Y3; Y3_];
+            Y4 = [Y4; Y4_];
+
+            %% add subject ID and trl no
+            sub_id_ = repmat(isub_count,[numel(X1_),1]);
+            sub_id = [sub_id; sub_id_];
+            
+            cond_tmp = repmat(dat_out.desc.cond_(isub,1),[numel(X1_),1]);
+            cond_ = [cond_; cond_tmp];
+
+            ses_id_ = repmat(ises,[numel(X1_),1]);
+            ses_id = [ses_id; ses_id_];
+
+            trl_no_ = 1:numel(X1_);
+            trl_no = [trl_no; trl_no_'];
+            
+            if ises == 2
+                isub_count = isub_count +1;
+            end
         
-        ses_id_ = repmat(ises,[numel(X1_),1]);
-        ses_id = [ses_id; ses_id_];
-        
-        trl_no_ = 1:numel(X1_);
-        trl_no = [trl_no; trl_no_'];
+        end
         
         %% get confidence ratings 
         assoc_resp(assoc_corr~= 1) = NaN; % to get confidence rating just for hits
         
         conf_assoc(isub,ises) = nanmean(assoc_resp);
-        
-        %% check for associative performance criterion
-        
-        %item_nhits = dat_out.(s_names{ises}).item.n_hits(isub,1);
-        
-        %assoc_perf_nocorr(isub,ises) = (assoc_ncorr/item_nhits)*100;
-        
-%         if ises == 1
-%             
-%             if (assoc_ncorr/item_nhits) < .25 || isnan(assoc_ncorr/item_nhits)
-%                 dat_out.desc.mem_criterion(isub) = 1;
-%             end
-% 
-%         end
         
         %% check for associative performance criterion
         if ises == 2
@@ -359,36 +370,7 @@ dat_mat(:,21) = dat_out.ret1.pvt.rt_mean;
 dat_mat(:,22) = dat_out.ret2.pvt.rt_mean;
 dat_mat(:,23) = dat_out.ret1.pvt.lapses;
 dat_mat(:,24) = dat_out.ret2.pvt.lapses;
-% %dat_mat(:,7) = dat_out.desc.mem_criterion; %associative memory exclusion criterion
-% dat_mat(:,8) = dat_out.ret1.item.dprime;
-% dat_mat(:,9) = dat_out.ret2.item.dprime;
-% dat_mat(:,10) = dat_out.ret1.item.hit_rate;
-% dat_mat(:,11) = dat_out.ret1.item.fa_rate;
-% dat_mat(:,12) = dat_out.ret2.item.hit_rate;
-% dat_mat(:,13) = dat_out.ret2.item.fa_rate;
-% dat_mat(:,14) = assoc_perf(:,1);
-% dat_mat(:,15) = assoc_perf(:,2);
-% dat_mat(:,16) = assoc_perf_nocorr(:,1); %without +0.5 correction. for correlation with assoc dprime
-% dat_mat(:,17) = conf_item(:,1);
-% dat_mat(:,18) = conf_item(:,2);
-% dat_mat(:,19) = conf_assoc(:,1);
-% dat_mat(:,20) = conf_assoc(:,2);
-% dat_mat(:,21) = dat_out.ret1.pvt.rt_mean;
-% dat_mat(:,22) = dat_out.ret2.pvt.rt_mean;
-% dat_mat(:,23) = dat_out.ret1.pvt.lapses;
-% dat_mat(:,24) = dat_out.ret2.pvt.lapses;
 
-
-% dat_mat(:,13) = assoc_perf_nocorr(:,2);
-
-% dat_mat(:,10) = dat_out.ret1.assoc.dprime;
-% dat_mat(:,11) = dat_out.ret2.assoc.dprime;
-% dat_mat(:,12) = item_perf(:,1);
-% dat_mat(:,13) = item_perf(:,2);
-% dat_mat(:,14) = item_perf_high_acc(:,1);
-% dat_mat(:,15) = item_perf_high_acc(:,2);
-% dat_mat(:,16) = assoc_perf(:,1);
-% dat_mat(:,17) = assoc_perf(:,2);
 
 %% save
 dlmwrite(fullfile(savedir, [savename '.txt']), dat_mat,'delimiter', '\t')
@@ -396,18 +378,19 @@ dlmwrite(fullfile(savedir, [savename '.txt']), dat_mat,'delimiter', '\t')
 %% save associative data as txt file to load in R
 
 dat_mat_assoc(:,1) = sub_id;
-dat_mat_assoc(:,2) = ses_id;
-dat_mat_assoc(:,3) = trl_no;
-dat_mat_assoc(:,4) = X1;
-dat_mat_assoc(:,5) = X2;
-dat_mat_assoc(:,6) = X3;
-dat_mat_assoc(:,7) = X4;
-dat_mat_assoc(:,8) = Y1;
-dat_mat_assoc(:,9) = Y2;
-dat_mat_assoc(:,10) = Y3;
-dat_mat_assoc(:,11) = Y4;
-dat_mat_assoc(:,12) = Y;
+dat_mat_assoc(:,2) = cond_;
+dat_mat_assoc(:,3) = ses_id;
+dat_mat_assoc(:,4) = trl_no;
+dat_mat_assoc(:,5) = X1;
+dat_mat_assoc(:,6) = X2;
+dat_mat_assoc(:,7) = X3;
+dat_mat_assoc(:,8) = X4;
+dat_mat_assoc(:,9) = Y1;
+dat_mat_assoc(:,10) = Y2;
+dat_mat_assoc(:,11) = Y3;
+dat_mat_assoc(:,12) = Y4;
+dat_mat_assoc(:,13) = Y;
 
 %%
 dlmwrite(fullfile(savedir, 'assoc_dat.txt'), dat_mat_assoc,'delimiter', '\t')
-% 
+
