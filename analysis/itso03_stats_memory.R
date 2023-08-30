@@ -146,19 +146,19 @@ tapply(dat$assoc_corr2, dat$cond, f)
 
 #### subjective sleep duration
 f <- function(x) c(mean(x, na.rm = TRUE), qnorm(0.975)*sd(x, na.rm = TRUE)/sqrt(length(x)))
-tapply(dat$sleepdur, dat$cond, f)
 
+f(dat$sleepdur[dat$cond == 'sleep12' | dat$cond == 'sleep24' | dat$cond == 'wake24']) # across all 3 conditions with sleep interval
+tapply(dat$sleepdur, dat$cond, f) # per condition
 
-dat$assoc_acc2 = dat$assoc_corr2/dat$hits2
+mod_sleepdur = lm(sleepdur[cond == 'sleep12' | cond == 'sleep24' | cond == 'wake24'] ~ 
+         cond[cond == 'sleep12' | cond == 'sleep24' | cond == 'wake24'], data = dat)
+anova(mod_sleepdur)
+
 
 # correlation between pre-registered measure and dprime metric
-a = cor.test(dat$assocd1, dat$assoc_acc1)
-a = cor.test(dat$assocd1, dat$assocd1_mod)
+a = cor.test(dat$assoc_acc1, dat$assocd1_mod)
 a
-ggplot(data = dat, aes(x = assocd1, y = assocd1_mod)) + 
-  geom_point()
-
-ggplot(data = dat, aes(x = assocd2, y = assocd2_mod)) + 
+ggplot(data = dat, aes(x = assoc_acc1, y = assocd1_mod)) + 
   geom_point()
 
 ##### ------ test for baseline differences between all 4 conditions
@@ -217,9 +217,6 @@ dat$assocd_mod = dat$assocd2_mod - dat$assocd1_mod
 # run
 mod3 = lm(assocd_mod ~ interval*duration, dat)
 anova(mod3)
-
-
-
 
 
 ######### plot ################
@@ -296,7 +293,7 @@ c +
 
 
 ## save
-ggsave('fig2.png',
+ggsave('fig_revision.png',
        plot = last_plot(),
        height = 6,
        width = 14,
