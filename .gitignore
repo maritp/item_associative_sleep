@@ -1,0 +1,4 @@
+# Ignore DS_store
+.DS_Store
+data
+.Rproj.user
